@@ -89,11 +89,9 @@ def build_steps(meta_key, entry, new_postings_config, positive=True,
                     unrounded_amount = Decimal(step_days) / config.duration * total
 
                 if quantum:
-                    amount_with_remainder = unrounded_amount + round_remainder
                     step_amount = (
-                        amount_with_remainder / quantum
+                        unrounded_amount / quantum
                     ).quantize(Decimal('1'), rounding=ROUND_HALF_UP) * quantum
-                    round_remainder = amount_with_remainder - step_amount
                 else:
                     step_amount, remainder = round_and_remainder(unrounded_amount, place_num)
                     round_remainder_amount, round_remainder_remainder = round_and_remainder(round_remainder,

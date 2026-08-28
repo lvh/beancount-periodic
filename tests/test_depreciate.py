@@ -51,7 +51,7 @@ plugin "beancount_periodic.depreciate" "{'quantum':'0.01'}"
                         if 'Depreciation' in p.account)
                    for tx in depreciation_txns]
 
-        self.assertEqual(amounts, [Decimal('33.33'), Decimal('33.34'), Decimal('33.33')])
+        self.assertEqual(amounts, [Decimal('33.33'), Decimal('33.33'), Decimal('33.34')])
         self.assertEqual(sum(amounts), Decimal('100.00'))
         self.assertTrue(all(amount == amount.quantize(Decimal('0.01')) for amount in amounts))
 
