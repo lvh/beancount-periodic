@@ -32,6 +32,46 @@ def tx_depreciated(date: datetime.date, narration: str) -> Transaction:
 
 
 class DepreciateTest(unittest.TestCase):
+    def test_quantum_rounds_periods_and_puts_residual_in_final_period(self):
+        journal_str = """
+plugin "beancount_periodic.depreciate" "{'quantum':'0.01'}"
+1900-01-01 open Liabilities:CreditCard:0001 USD
+1900-01-01 open Assets:Equipment USD
+2022-01-01 * "Equipment"
+  Liabilities:CreditCard:0001    -100.00 USD
+  Assets:Equipment
+    depreciate: "3 Year /Yearly"
+"""
+        entries, errors, options_map = load_string(journal_str)
+        self.assertEqual(errors, [])
+
+        depreciation_txns = [e for e in entries
+                             if isinstance(e, Transaction) and 'Depreciated' in e.narration]
+        amounts = [next(p.units.number for p in tx.postings
+                        if 'Depreciation' in p.account)
+                   for tx in depreciation_txns]
+
+        self.assertEqual(amounts, [Decimal('33.33'), Decimal('33.34'), Decimal('33.33')])
+        self.assertEqual(sum(amounts), Decimal('100.00'))
+        self.assertTrue(all(amount == amount.quantize(Decimal('0.01')) for amount in amounts))
+
+    def test_quantum_rejects_incompatible_depreciable_amount(self):
+        journal_str = """
+plugin "beancount_periodic.depreciate" "{'quantum':'0.01'}"
+1900-01-01 open Liabilities:CreditCard:0001 USD
+1900-01-01 open Assets:Equipment USD
+2022-01-01 * "Equipment"
+  Liabilities:CreditCard:0001    -100.001 USD
+  Assets:Equipment
+    depreciate: "3 Year /Yearly"
+"""
+        entries, errors, options_map = load_string(journal_str)
+        self.assertEqual(len(errors), 1)
+        self.assertIn(
+            'Depreciable amount 100.001 is not an exact multiple of quantum 0.01',
+            errors[0].message,
+        )
+
     def test_simple(self):
         journal_str = """
 plugin "beancount_periodic.depreciate"

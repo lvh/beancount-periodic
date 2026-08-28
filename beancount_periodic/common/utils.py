@@ -1,5 +1,5 @@
 import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional
 
 from beancount.core import data
@@ -42,7 +42,8 @@ def select_periodic_posting_groups(entry, meta_name, errors):
 
 def build_steps(meta_key, entry, new_postings_config, positive=True,
                 narration_suffix='(% d / % d)',
-                generate_until: Optional[datetime.date] = None):
+                generate_until: Optional[datetime.date] = None,
+                quantum: Optional[Decimal] = None):
     new_entries = []
 
     if len(new_postings_config) == 1:
@@ -60,6 +61,10 @@ def build_steps(meta_key, entry, new_postings_config, positive=True,
 
     for config, posting, new_account in new_postings_config:
         total = config.total - config.salvage_value
+        if quantum and total % quantum != 0:
+            raise ValueError(
+                f'Depreciable amount {total} is not an exact multiple of quantum {quantum}'
+            )
         amount_remainder = remove_exponent_zero(total)
         start_date = config.start
 
@@ -79,18 +84,24 @@ def build_steps(meta_key, entry, new_postings_config, positive=True,
 
             if step_i < len(config.steps) - 1:
                 if config.equal_amount:
-                    step_amount, remainder = round_and_remainder(step_ratio * total / step_num, place_num)
+                    unrounded_amount = step_ratio * total / step_num
                 else:
-                    step_amount, remainder = round_and_remainder(Decimal(step_days) / config.duration * total,
-                                                                 place_num)
+                    unrounded_amount = Decimal(step_days) / config.duration * total
 
-                round_remainder_amount, round_remainder_remainder = round_and_remainder(round_remainder,
-                                                                                        place_num)
-                if abs(round_remainder_amount) > 0:
-                    step_amount += round_remainder_amount
-                    round_remainder = round_remainder_remainder
-
-                round_remainder += remainder
+                if quantum:
+                    amount_with_remainder = unrounded_amount + round_remainder
+                    step_amount = (
+                        amount_with_remainder / quantum
+                    ).quantize(Decimal('1'), rounding=ROUND_HALF_UP) * quantum
+                    round_remainder = amount_with_remainder - step_amount
+                else:
+                    step_amount, remainder = round_and_remainder(unrounded_amount, place_num)
+                    round_remainder_amount, round_remainder_remainder = round_and_remainder(round_remainder,
+                                                                                            place_num)
+                    if abs(round_remainder_amount) > 0:
+                        step_amount += round_remainder_amount
+                        round_remainder = round_remainder_remainder
+                    round_remainder += remainder
                 amount_remainder -= step_amount
             else:  # the last step
                 step_amount = amount_remainder

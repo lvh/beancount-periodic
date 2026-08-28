@@ -4,6 +4,16 @@ from .config import *
 
 
 class MyTestCase(unittest.TestCase):
+    def test_plugin_config_quantum(self):
+        config = PluginConfig.from_string("{'quantum': '0.01'}")
+        self.assertEqual(config.quantum, Decimal('0.01'))
+
+        with self.assertRaises(RuntimeError):
+            PluginConfig.from_string("{'quantum': '0'}")
+
+        with self.assertRaises(RuntimeError):
+            PluginConfig.from_string("{'quantum': 'not-a-number'}")
+
     def test_parse(self):
         default_start_date = datetime.datetime.strptime('2021-01-31', '%Y-%m-%d')
         config_1, config_err_1 = parse('90', default_total=1000, default_start_date=default_start_date,

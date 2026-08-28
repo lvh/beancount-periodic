@@ -77,7 +77,8 @@ def depreciate(entries: data.Entries, unused_options_map, config_string=""):
                     build_steps('depreciate', entry, new_postings_config,
                                 positive=False,
                                 narration_suffix='Depreciated(%d/%d)',
-                                generate_until=plugin_config.generate_until))
+                                generate_until=plugin_config.generate_until,
+                                quantum=plugin_config.quantum))
 
     if new_entries:
         entries.extend(new_entries)

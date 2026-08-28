@@ -203,6 +203,23 @@ plugin "beancount_periodic.amortize" "{'generate_until':'today'}"
 plugin "beancount_periodic.amortize" "{'generate_until':'2025-01-01'}"
 ```
 
+#### quantum (`depreciate` only)
+
+The optional `quantum` sets the smallest unit used for generated depreciation
+postings. Rounding differences are carried between periods, and the final
+period receives the remaining depreciable basis so the schedule still totals
+exactly to basis less salvage value.
+
+For example, use a one-cent quantum for USD accounting entries:
+
+```beancount
+plugin "beancount_periodic.depreciate" "{'quantum':'0.01'}"
+```
+
+The depreciable amount must be an exact multiple of the configured quantum.
+Without this option, the plugin retains its existing adaptive-precision
+behavior.
+
 ### Config string in meta
 
 All settings follow the same rules. These are some examples:

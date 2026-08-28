@@ -2,6 +2,7 @@ import datetime
 import re
 import sys
 import ast
+from decimal import InvalidOperation
 from typing import Tuple, Optional
 from dataclasses import dataclass
 
@@ -265,6 +266,7 @@ def __print_config_match_result(date_end, date_start, formula, num, step_named, 
 @dataclass
 class PluginConfig:
     generate_until: Optional[datetime.date] = None
+    quantum: Optional[Decimal] = None
 
     @staticmethod
     def from_string(config_str: str) -> 'PluginConfig':
@@ -283,5 +285,14 @@ class PluginConfig:
         except (ValueError, TypeError):
             raise RuntimeError('Bad "generate_until" value - it must be a valid date, formatted in ISO 8601 (e.g. '
                                '"2024-12-31") or the literal "today".')
+
+        try:
+            quantum = config_dict.get('quantum', None)
+            if quantum is not None:
+                ret.quantum = Decimal(str(quantum))
+                if ret.quantum <= 0:
+                    raise ValueError
+        except (ValueError, TypeError, InvalidOperation):
+            raise RuntimeError('Bad "quantum" value - it must be a positive decimal amount (for example, "0.01").')
 
         return ret
